@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GVP</title>
 
-  <!-- Ícones (Caminhos relativos ao repositório IOSAdroid) -->
+  <!-- Ícones -->
   <link rel="apple-touch-icon" sizes="180x180" href="./GVP_Icon_Hospital_192.png">
   <link rel="icon" type="image/png" href="./GVP_Icon_Hospital_192.png">
 
-  <!-- Manifesto PWA (Android/Chrome) -->
-  <link rel="manifest" href="./manifest.json">
+  <!-- ⚠️ O MANIFEST FOI REMOVIDO DAQUI. Ele será injetado via JS APENAS no Android. -->
 
   <!-- Configurações PWA (iOS e Android) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -25,24 +24,34 @@
     h1 { margin-top: 15px; margin-bottom: 20px; color: #0078D7; font-size: 30px; }
     .instrucao { margin: 25px auto 0; max-width: 360px; padding: 18px; border-radius: 12px; background: #f2f2f2; color: #333333; font-size: 19px; line-height: 1.5; font-weight: bold; }
     .observacao { margin: 18px auto 0; max-width: 360px; color: #666666; font-size: 16px; line-height: 1.4; }
-    
-    /* Estilo do botão para computador e navegador Android */
     .btn-pc { display: none; margin: 30px auto 0; padding: 15px 30px; background: #0078D7; color: white; text-decoration: none; border-radius: 8px; font-size: 20px; font-weight: bold; max-width: 300px; }
     .btn-pc:hover { background: #005BB5; }
   </style>
 
   <script>
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // 🔥 ISOLAMENTO DO ANDROID: O manifest só é criado se for Android
+    if (isAndroid) {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = './manifest.json';
+        document.head.appendChild(link);
+    }
+
     const urlGVP = "https://script.google.com/macros/s/AKfycbx6wW5b5yKpzJSJEw04q-7Cx9uct8fvlHR4ifgEZVYPhT3AQuDjXwHrZ9fT47YzMRiT/exec";
     
     // Pega o token da URL (?d=...)
-    const urlParams = new URLSearchParams(window.location.search);
-    let token = urlParams.get('d');
+    let token = new URLSearchParams(window.location.search).get('d');
     
-    // 🔥 INTELIGÊNCIA ANDROID: Salva o token no celular para não pedir o nome toda hora
-    if (token) {
-        localStorage.setItem("gvp_token", token);
-    } else {
-        token = localStorage.getItem("gvp_token");
+    // 🔥 ISOLAMENTO DO ANDROID: Salva o token apenas no Android
+    if (isAndroid) {
+        if (token) {
+            localStorage.setItem("gvp_token", token);
+        } else {
+            token = localStorage.getItem("gvp_token");
+        }
     }
 
     let urlFinal = urlGVP;
@@ -50,69 +59,37 @@
         urlFinal += "?d=" + encodeURIComponent(token);
     }
 
-    // 🔥 1. LÓGICA ORIGINAL DO IOS (Redirecionamento imediato)
-    // O iOS usa o próprio navegador standalone para abrir. Redireciona na hora.
+    // 🔥 LÓGICA DO IOS ORIGINAL (Intacta)
     if (window.navigator.standalone === true) {
         window.location.replace(urlFinal);
     }
 
     window.addEventListener('DOMContentLoaded', function () {
         const standalone = window.matchMedia('(display-mode: standalone)').matches;
-        const isAndroid = /Android/i.test(navigator.userAgent);
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
-        const btn = document.getElementById('btnAcessar');
-        const instrucao = document.querySelector('.instrucao');
-        const observacao = document.querySelector('.observacao');
-
-        btn.href = urlFinal;
-
-        // 🔥 2. LÓGICA DO ANDROID PWA (Se estiver instalado no Android)
-        if (standalone && isAndroid) {
+        if (standalone) {
             window.location.replace(urlFinal);
+        } else {
+            const btn = document.getElementById('btnAcessar');
+            btn.href = urlFinal;
             
-            // Fallback: se por algum motivo o Android demorar a redirecionar, mostra o botão
-            setTimeout(function () {
+            if (!isIOS && !isAndroid) {
+                // Computador
                 btn.style.display = 'inline-block';
-                btn.textContent = "Abrir o GVP";
-            }, 4000);
-            return;
-        }
-
-        // 3. Se estiver no iOS mas não for standalone (ex: aberto no Safari direto)
-        if (standalone && !isAndroid) {
-            window.location.replace(urlFinal);
-            return;
-        }
-
-        // 4. Modo Navegador (PC e Android no Chrome)
-        if (!isMobile || isAndroid) {
-            btn.style.display = 'inline-block';
-            
-            if (!isMobile) {
-                // É um computador
-                btn.textContent = "Acessar o Sistema";
-                instrucao.style.display = 'none';
-                observacao.style.display = 'none';
+                document.querySelector('.instrucao').style.display = 'none';
+                document.querySelector('.observacao').style.display = 'none';
             } else if (isAndroid) {
-                // É um Android aberto no navegador
+                // Android Navegador
+                btn.style.display = 'inline-block';
                 btn.textContent = "Abrir o GVP";
             }
         }
     });
 
-    // 🔥 5. SERVICE WORKER APENAS NO ANDROID
-    // O iOS tem bugs com SW e redirecionamento externo, então bloqueamos ele no iPhone.
-    if ("serviceWorker" in navigator && /Android/i.test(navigator.userAgent)) {
+    // 🔥 SERVICE WORKER APENAS NO ANDROID
+    if (isAndroid && "serviceWorker" in navigator) {
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("./sw.js")
-          .then(function (registro) {
-            console.log("Service Worker registrado (Android):", registro.scope);
-          })
-          .catch(function (erro) {
-            console.error("Erro ao registrar Service Worker:", erro);
-          });
+        navigator.serviceWorker.register("./sw.js").catch(e => console.log(e));
       });
     }
   </script>
@@ -131,7 +108,6 @@
     Depois, toque no ícone GVP que será criado na Tela de Início para acessar o sistema.
   </div>
 
-  <!-- Botão que aparece no PC e no Android (Navegador) -->
   <a href="#" id="btnAcessar" class="btn-pc">Acessar o Sistema</a>
 </body>
 </html>

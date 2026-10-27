@@ -33,12 +33,27 @@
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // 🔥 ISOLAMENTO DO ANDROID: O manifest só é criado se for Android
-    if (isAndroid) {
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = './manifest.json';
-        document.head.appendChild(link);
+    
+/* TOKEN DO DISPOSITIVO — iOS e Android */
+if (token && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token)) {
+    try {
+        localStorage.setItem("gvp_token", token);
+    } catch (e) {
+        console.log("Não foi possível salvar o token localmente.");
     }
+} else {
+    try {
+        const tokenSalvo = localStorage.getItem("gvp_token");
+
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tokenSalvo || "")) {
+            token = tokenSalvo;
+        } else {
+            token = null;
+        }
+    } catch (e) {
+        token = null;
+    }
+}
 
     const urlGVP = "https://script.google.com/macros/s/AKfycbx6wW5b5yKpzJSJEw04q-7Cx9uct8fvlHR4ifgEZVYPhT3AQuDjXwHrZ9fT47YzMRiT/exec";
     

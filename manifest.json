@@ -3,7 +3,7 @@
   "short_name": "Visitas",
   "description": "Sistema GVP - Grupo de Visitas aos Hospitais",
   "lang": "pt-BR",
-  "id": "/gvp-icon/",
+  "id": "/IOSAdroid/",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

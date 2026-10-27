@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GVP</title>
+
+  <!-- Ícones iOS e navegador -->
+  <link rel="apple-touch-icon" sizes="180x180"
+        href="https://gilbertotofanelo-gif.github.io/gvp-icon/GVP_Icon_Hospital_192.png">
+  <link rel="icon" type="image/png"
+        href="https://gilbertotofanelo-gif.github.io/gvp-icon/GVP_Icon_Hospital_192.png">
+
+  <!-- Manifesto PWA (Android/Chrome) -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Configurações iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Visitas">
+  <meta name="theme-color" content="#0078D7">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 30px 20px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #ffffff;
+    }
+
+    img {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+      margin-top: 20px;
+    }
+
+    h1 {
+      margin-top: 15px;
+      margin-bottom: 20px;
+      color: #0078D7;
+      font-size: 30px;
+    }
+
+    .instrucao {
+      margin: 25px auto 0;
+      max-width: 360px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #f2f2f2;
+      color: #333333;
+      font-size: 19px;
+      line-height: 1.5;
+      font-weight: bold;
+    }
+
+    .observacao {
+      margin: 18px auto 0;
+      max-width: 360px;
+      color: #666666;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .btn-acessar {
+      display: none;
+      margin: 30px auto 0;
+      padding: 15px 30px;
+      background: #0078D7;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: bold;
+      max-width: 300px;
+    }
+
+    .btn-acessar:hover {
+      background: #005BB5;
+    }
+  </style>
+
+  <script>
+    const urlGVP =
+      "https://script.google.com/macros/s/AKfycbx6wW5b5yKpzJSJEw04q-7Cx9uct8fvlHR4ifgEZVYPhT3AQuDjXwHrZ9fT47YzMRiT/exec";
+
+    // Preserva o token recebido na URL, quando existir.
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("d");
+
+    let urlFinal = urlGVP;
+    if (token) {
+      urlFinal += "?d=" + encodeURIComponent(token);
+    }
+
+    // Detecta modo standalone de forma robusta (iOS + Android).
+    function isStandalone() {
+      return (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches ||
+        window.matchMedia("(display-mode: minimal-ui)").matches ||
+        window.navigator.standalone === true
+      );
+    }
+
+    window.addEventListener("DOMContentLoaded", function () {
+      const standalone = isStandalone();
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      const btn = document.getElementById("btnAcessar");
+      const instrucao = document.querySelector(".instrucao");
+      const observacao = document.querySelector(".observacao");
+
+      btn.href = urlFinal;
+
+      // Aberto pelo ícone instalado: redireciona direto.
+      if (standalone) {
+        window.location.replace(urlFinal);
+
+        // Fallback: se em 4s ainda estiver nesta página, mostra o botão.
+        setTimeout(function () {
+          btn.style.display = "inline-block";
+          btn.textContent = "Abrir o GVP";
+        }, 4000);
+        return;
+      }
+
+      // Android no navegador: mostra botão de acesso direto.
+      if (isAndroid) {
+        btn.style.display = "inline-block";
+        btn.textContent = "Abrir o GVP";
+        return;
+      }
+
+      // Computador: mostra botão de acesso.
+      if (!isIOS) {
+        btn.style.display = "inline-block";
+        btn.textContent = "Acessar o Sistema";
+        instrucao.style.display = "none";
+        observacao.style.display = "none";
+      }
+
+      // iOS permanece com as instruções de "Adicionar à Tela de Início".
+    });
+
+    // Registra o Service Worker.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("./sw.js")
+          .then(function (registro) {
+            console.log("Service Worker registrado:", registro.scope);
+          })
+          .catch(function (erro) {
+            console.error("Erro ao registrar Service Worker:", erro);
+          });
+      });
+    }
+  </script>
+</head>
+
+<body>
+  <img
+    src="https://gilbertotofanelo-gif.github.io/gvp-icon/GVP_Icon_Hospital_192.png"
+    alt="Ícone GVP"
+  >
+
+  <h1>GVP</h1>
+
+  <div class="instrucao">
+    Toque em <b>Compartilhar</b> e escolha<br>
+    "Adicionar à Tela de Início".
+  </div>
+
+  <div class="observacao">
+    Depois, toque no ícone GVP criado na Tela de Início
+    para acessar o sistema.
+  </div>
+
+  <a href="#" id="btnAcessar" class="btn-acessar">
+    Acessar o Sistema
+  </a>
+</body>
+</html>

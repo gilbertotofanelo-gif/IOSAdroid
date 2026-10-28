@@ -94,27 +94,35 @@
 
     // O token recebido pelo link personalizado é guardado no GitHub Pages.
     // O armazenamento é separado daquele usado pelo Apps Script.
-    function obterToken() {
-      const params = new URLSearchParams(window.location.search);
-      const tokenURL = params.get("d");
 
-      if (tokenValido(tokenURL)) {
-        try {
-          localStorage.setItem("gvp_device", tokenURL);
-        } catch (e) {}
+function obterToken() {
+  const params = new URLSearchParams(window.location.search);
+  const tokenURL = params.get("d");
 
-        return tokenURL;
-      }
+  // 1. Se o link já contém um token válido, reutiliza-o.
+  if (tokenValido(tokenURL)) {
+    try {
+      localStorage.setItem("gvp_device", tokenURL);
+    } catch (e) {}
 
-      try {
-        const tokenSalvo = localStorage.getItem("gvp_device");
-        if (tokenValido(tokenSalvo)) {
-          return tokenSalvo;
-        }
-      } catch (e) {}
+    return tokenURL;
+  }
 
-      return null;
+  // 2. Tenta recuperar o token salvo neste navegador.
+  try {
+    const tokenSalvo = localStorage.getItem("gvp_device");
+
+    if (tokenValido(tokenSalvo)) {
+      return tokenSalvo;
     }
+  } catch (e) {
+    console.log("Não foi possível ler o token salvo.");
+  }
+
+  // 3. Sem token, não inventa outro código.
+  return null;
+}
+
 
     const token = obterToken();
 

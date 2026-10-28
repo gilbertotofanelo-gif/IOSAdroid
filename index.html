@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -17,80 +18,158 @@
   <meta name="theme-color" content="#0078D7">
 
   <style>
-    body { margin: 0; padding: 30px 20px; font-family: Arial, sans-serif; text-align: center; background: #ffffff; }
-    img { width: 180px; height: 180px; object-fit: contain; margin-top: 20px; }
-    h1 { margin-top: 15px; margin-bottom: 20px; color: #0078D7; font-size: 30px; }
-    .instrucao { margin: 25px auto 0; max-width: 360px; padding: 18px; border-radius: 12px; background: #f2f2f2; color: #333333; font-size: 19px; line-height: 1.5; font-weight: bold; }
-    .observacao { margin: 18px auto 0; max-width: 360px; color: #666666; font-size: 16px; line-height: 1.4; }
-    .btn-pc { display: none; margin: 30px auto 0; padding: 15px 30px; background: #0078D7; color: white; text-decoration: none; border-radius: 8px; font-size: 20px; font-weight: bold; max-width: 300px; }
-    .btn-pc:hover { background: #005BB5; }
+    body {
+      margin: 0;
+      padding: 30px 20px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #ffffff;
+    }
+
+    img {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+      margin-top: 20px;
+    }
+
+    h1 {
+      margin-top: 15px;
+      margin-bottom: 20px;
+      color: #0078D7;
+      font-size: 30px;
+    }
+
+    .instrucao {
+      margin: 25px auto 0;
+      max-width: 360px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #f2f2f2;
+      color: #333333;
+      font-size: 19px;
+      line-height: 1.5;
+      font-weight: bold;
+    }
+
+    .observacao {
+      margin: 18px auto 0;
+      max-width: 360px;
+      color: #666666;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .btn-pc {
+      display: none;
+      margin: 30px auto 0;
+      padding: 15px 30px;
+      background: #0078D7;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: bold;
+      max-width: 300px;
+    }
+
+    .btn-pc:hover {
+      background: #005BB5;
+    }
   </style>
 
   <script>
-    const urlGVP = "https://script.google.com/macros/s/AKfycbx6wW5b5yKpzJSJEw04q-7Cx9uct8fvlHR4ifgEZVYPhT3AQuDjXwHrZ9fT47YzMRiT/exec";
-    
-    // 🔥 ISOLAMENTO DO ANDROID: Só cria o manifest se for Android
+    const urlGVP =
+      "https://script.google.com/macros/s/AKfycbx6wW5b5yKpzJSJEw04q-7Cx9uct8fvlHR4ifgEZVYPhT3AQuDjXwHrZ9fT47YzMRiT/exec";
+
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isMobile = isIOS || isAndroid;
 
+    // Valida o formato do token UUID usado pelo GVP.
+    function tokenValido(token) {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(String(token || "").trim());
+    }
+
+    // O token recebido pelo link personalizado é guardado no GitHub Pages.
+    // O armazenamento é separado daquele usado pelo Apps Script.
+    function obterToken() {
+      const params = new URLSearchParams(window.location.search);
+      const tokenURL = params.get("d");
+
+      if (tokenValido(tokenURL)) {
+        try {
+          localStorage.setItem("gvp_device", tokenURL);
+        } catch (e) {}
+
+        return tokenURL;
+      }
+
+      try {
+        const tokenSalvo = localStorage.getItem("gvp_device");
+        if (tokenValido(tokenSalvo)) {
+          return tokenSalvo;
+        }
+      } catch (e) {}
+
+      return null;
+    }
+
+    const token = obterToken();
+
+    // Transmite o token para o Apps Script quando ele existe.
+    const urlFinal = token
+      ? urlGVP + "?d=" + encodeURIComponent(token)
+      : urlGVP;
+
+    // Configuração exclusiva para Android.
     if (isAndroid) {
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = './manifest.json';
-        document.head.appendChild(link);
+      const manifest = document.createElement("link");
+      manifest.rel = "manifest";
+      manifest.href = "./manifest.json";
+      document.head.appendChild(manifest);
 
-        // Registra o Service Worker apenas no Android
-        if ("serviceWorker" in navigator) {
-            window.addEventListener("load", function () {
-                navigator.serviceWorker.register("./sw.js").catch(e => console.log(e));
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js")
+            .catch(function (erro) {
+              console.log("Service Worker:", erro);
             });
-        }
+        });
+      }
     }
 
-    // Pega o token da URL (?d=...)
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('d');
-    
-    let urlFinal = urlGVP;
-    if (token) {
-        urlFinal += "?d=" + encodeURIComponent(token);
-    }
+    window.addEventListener("DOMContentLoaded", function () {
+      const standaloneIOS = window.navigator.standalone === true;
+      const standaloneAndroid =
+        window.matchMedia("(display-mode: standalone)").matches;
+      const standalone = standaloneIOS || standaloneAndroid;
 
-    // 🔥 REDIRECIONAMENTO ORIGINAL DO IOS (Na hora)
-    if (window.navigator.standalone === true) {
+      const btn = document.getElementById("btnAcessar");
+      const instrucao = document.querySelector(".instrucao");
+      const observacao = document.querySelector(".observacao");
+
+      btn.href = urlFinal;
+
+      // Ao abrir pelo ícone instalado, encaminha ao aplicativo.
+      if (standalone) {
         window.location.replace(urlFinal);
-    }
+        return;
+      }
 
-    window.addEventListener('DOMContentLoaded', function () {
-        const standalone = window.matchMedia('(display-mode: standalone)').matches;
-        const btn = document.getElementById('btnAcessar');
-        const instrucao = document.querySelector('.instrucao');
-        const observacao = document.querySelector('.observacao');
-        
-        btn.href = urlFinal;
+      // No computador ou no navegador Android, mostra o botão.
+      if (!isMobile || isAndroid) {
+        btn.style.display = "inline-block";
 
-        // Redirecionamento para Android instalado
-        if (standalone && isAndroid) {
-            window.location.replace(urlFinal);
-            return;
-        }
-
-        if (standalone && !isAndroid) {
-            window.location.replace(urlFinal);
+        if (!isMobile) {
+          btn.textContent = "Acessar o Sistema";
+          instrucao.style.display = "none";
+          observacao.style.display = "none";
         } else {
-            // Mostra o botão se for PC ou Android no navegador
-            if (!isMobile || isAndroid) {
-                btn.style.display = 'inline-block';
-                if (!isMobile) {
-                    btn.textContent = "Acessar o Sistema";
-                    instrucao.style.display = 'none';
-                    observacao.style.display = 'none';
-                } else if (isAndroid) {
-                    btn.textContent = "Abrir o GVP";
-                }
-            }
+          btn.textContent = "Abrir o GVP";
         }
+      }
     });
   </script>
 </head>
@@ -100,13 +179,15 @@
   <h1>GVP</h1>
 
   <div class="instrucao">
-    Toque em <b>Compartilhar</b> e escolha<br>"Adicionar à Tela de Início".
+    Toque em <b>Compartilhar</b> e escolha<br>
+    "Adicionar à Tela de Início".
   </div>
 
   <div class="observacao">
-    Depois, toque no ícone GVP que será criado na Tela de Início para acessar o sistema.
+    Depois, toque no ícone GVP criado na Tela de Início para acessar o sistema.
   </div>
 
   <a href="#" id="btnAcessar" class="btn-pc">Acessar o Sistema</a>
 </body>
 </html>
+```

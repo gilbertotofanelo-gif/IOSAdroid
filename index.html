@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -6,9 +7,10 @@
   <title>GVP</title>
 
   <!-- Ícones -->
-  <link rel="apple-touch-icon" sizes="180x180" href="https://gilbertotofanelo-gif.github.io/IOSAdroid/GVP_Icon_Hospital_192.png?v=2">
-  <link rel="icon" type="image/png" sizes="192x192" href="https://gilbertotofanelo-gif.github.io/IOSAdroid/GVP_Icon_Hospital_192.png?v=2">
-
+  <link rel="apple-touch-icon" sizes="180x180"
+        href="https://gilbertotofanelo-gif.github.io/IOSAdroid/GVP_Icon_Hospital_192.png?v=2">
+  <link rel="icon" type="image/png" sizes="192x192"
+        href="https://gilbertotofanelo-gif.github.io/IOSAdroid/GVP_Icon_Hospital_192.png?v=2">
 
   <!-- Configurações iOS -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -76,62 +78,77 @@
     .btn-pc:hover {
       background: #005BB5;
     }
+
+    .aviso-token {
+      display: none;
+      margin: 25px auto;
+      max-width: 360px;
+      padding: 16px;
+      border-radius: 10px;
+      background: #fff3cd;
+      color: #664d03;
+      font-size: 16px;
+      line-height: 1.5;
+    }
   </style>
 
   <script>
     const urlGVP =
       "https://script.google.com/macros/s/AKfycbx6wW5b5yKpzJSJEw04q-7Cx9uct8fvlHR4ifgEZVYPhT3AQuDjXwHrZ9fT47YzMRiT/exec";
 
+    const urlPagina =
+      "https://gilbertotofanelo-gif.github.io/IOSAdroid/";
+
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isMobile = isIOS || isAndroid;
 
-    // Valida o formato do token UUID usado pelo GVP.
     function tokenValido(token) {
       return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(String(token || "").trim());
     }
 
-    // O token recebido pelo link personalizado é guardado no GitHub Pages.
-    // O armazenamento é separado daquele usado pelo Apps Script.
+    /*
+     * Recupera o token existente.
+     * Nunca gera um UUID novo neste launcher.
+     */
+    function obterToken() {
+      const params = new URLSearchParams(window.location.search);
+      const tokenURL = params.get("d");
 
-function obterToken() {
-  const params = new URLSearchParams(window.location.search);
-  const tokenURL = params.get("d");
+      if (tokenValido(tokenURL)) {
+        try {
+          localStorage.setItem("gvp_device", tokenURL);
+        } catch (e) {}
 
-  // 1. Se o link já contém um token válido, reutiliza-o.
-  if (tokenValido(tokenURL)) {
-    try {
-      localStorage.setItem("gvp_device", tokenURL);
-    } catch (e) {}
+        return tokenURL;
+      }
 
-    return tokenURL;
-  }
+      try {
+        const tokenSalvo = localStorage.getItem("gvp_device");
 
-  // 2. Tenta recuperar o token salvo neste navegador.
-  try {
-    const tokenSalvo = localStorage.getItem("gvp_device");
+        if (tokenValido(tokenSalvo)) {
+          return tokenSalvo;
+        }
+      } catch (e) {
+        console.log("Não foi possível ler o token local.");
+      }
 
-    if (tokenValido(tokenSalvo)) {
-      return tokenSalvo;
+      return null;
     }
-  } catch (e) {
-    console.log("Não foi possível ler o token salvo.");
-  }
-
-  // 3. Sem token, não inventa outro código.
-  return null;
-}
-
 
     const token = obterToken();
 
-    // Transmite o token para o Apps Script quando ele existe.
+    /*
+     * Só monta o endereço do aplicativo com um token válido.
+     */
     const urlFinal = token
       ? urlGVP + "?d=" + encodeURIComponent(token)
-      : urlGVP;
+      : null;
 
-    // Configuração exclusiva para Android.
+    /*
+     * Configuração exclusiva para Android.
+     */
     if (isAndroid) {
       const manifest = document.createElement("link");
       manifest.rel = "manifest";
@@ -150,23 +167,54 @@ function obterToken() {
 
     window.addEventListener("DOMContentLoaded", function () {
       const standaloneIOS = window.navigator.standalone === true;
+
       const standaloneAndroid =
         window.matchMedia("(display-mode: standalone)").matches;
+
       const standalone = standaloneIOS || standaloneAndroid;
 
       const btn = document.getElementById("btnAcessar");
       const instrucao = document.querySelector(".instrucao");
       const observacao = document.querySelector(".observacao");
+      const aviso = document.getElementById("avisoToken");
+
+      /*
+       * Se o ícone instalado abrir sem token recuperável,
+       * não redireciona para o GAS sem identificação.
+       */
+      if (!token) {
+        if (standalone) {
+          aviso.style.display = "block";
+          aviso.textContent =
+            "Não foi possível recuperar o código deste celular. " +
+            "Não será criado outro código automaticamente. " +
+            "Abra o GVP pelo link personalizado que você recebeu " +
+            "ao escolher “Lembrar neste celular”.";
+          instrucao.style.display = "none";
+          observacao.style.display = "none";
+        } else {
+          aviso.style.display = "block";
+          aviso.textContent =
+            "Este acesso não contém o código personalizado do aparelho. " +
+            "Abra o link personalizado do GVP para manter seu nome salvo.";
+        }
+
+        return;
+      }
 
       btn.href = urlFinal;
 
-      // Ao abrir pelo ícone instalado, encaminha ao aplicativo.
+      /*
+       * Ao abrir pelo ícone instalado, usa o mesmo token.
+       */
       if (standalone) {
         window.location.replace(urlFinal);
         return;
       }
 
-      // No computador ou no navegador Android, mostra o botão.
+      /*
+       * No computador ou no navegador Android, mostra o botão.
+       */
       if (!isMobile || isAndroid) {
         btn.style.display = "inline-block";
 
@@ -183,7 +231,10 @@ function obterToken() {
 </head>
 
 <body>
-  <img src="./GVP_Icon_Hospital_192.png" alt="Ícone GVP">
+  <img
+    src="https://gilbertotofanelo-gif.github.io/IOSAdroid/GVP_Icon_Hospital_192.png"
+    alt="Ícone GVP">
+
   <h1>GVP</h1>
 
   <div class="instrucao">
@@ -195,7 +246,10 @@ function obterToken() {
     Depois, toque no ícone GVP criado na Tela de Início para acessar o sistema.
   </div>
 
-  <a href="#" id="btnAcessar" class="btn-pc">Acessar o Sistema</a>
+  <div id="avisoToken" class="aviso-token"></div>
+
+  <a href="#" id="btnAcessar" class="btn-pc">
+    Acessar o Sistema
+  </a>
 </body>
 </html>
-
